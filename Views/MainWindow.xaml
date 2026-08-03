@@ -1,11 +1,66 @@
 ﻿<Window x:Class="PdfEditor.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Pdf_Signer" Height="850" Width="1150"
+        Title="PDF Signer &amp; Studio" Height="850" Width="1200"
         WindowStartupLocation="CenterScreen"
+        Background="#1E1E1E"
         AllowDrop="True"
         Drop="Window_Drop"
         DragOver="Window_DragOver">
+
+    <Window.Resources>
+        <Style x:Key="NavButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#333337"/>
+            <Setter Property="Foreground" Value="#F1F1F1"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#3E3E42"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="#252526"/>
+                                <Setter Property="Foreground" Value="#555555"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+            <Setter Property="Background" Value="#007ACC"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#0098FF"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="#252526"/>
+                                <Setter Property="Foreground" Value="#555555"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
 
     <Window.InputBindings>
         <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
@@ -23,43 +78,47 @@
         </Grid.RowDefinitions>
 
         <!-- Top Toolbar -->
-        <Border Grid.Row="0" Background="#2D2D30" Padding="6">
+        <Border Grid.Row="0" Background="#2D2D30" Padding="8,6" BorderBrush="#3E3E42" BorderThickness="0,0,0,1">
             <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
 
-                <!-- File & Signature Actions -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,15,0">
-                    <Button x:Name="BtnOpen" Content="📁 Open PDF" Click="BtnOpen_Click" Margin="3" Padding="8,4"/>
-                    <Button x:Name="BtnSign" Content="✍️ Draw Signature" Click="BtnSign_Click" IsEnabled="False" Margin="3" Padding="8,4"/>
-                    <Button x:Name="BtnClearSign" Content="🗑️ Remove Signature" Click="BtnClearSign_Click" IsEnabled="False" Margin="3" Padding="8,4"/>
-                    <Button x:Name="BtnSave" Content="💾 Save PDF" Click="BtnSave_Click" IsEnabled="False" Margin="3" Padding="8,4"/>
+                    <Button x:Name="BtnOpen" Content="📁 Open PDF" Style="{StaticResource NavButtonStyle}" Click="BtnOpen_Click"/>
+                    <Button x:Name="BtnAddText" Content="📝 Add Text" Style="{StaticResource NavButtonStyle}" Click="BtnAddText_Click" IsEnabled="False"/>
+                    <Button x:Name="BtnSign" Content="✍️ Draw Signature" Style="{StaticResource NavButtonStyle}" Click="BtnSign_Click" IsEnabled="False"/>
+                    <Button x:Name="BtnClearSign" Content="🗑️ Clear Signature" Style="{StaticResource NavButtonStyle}" Click="BtnClearSign_Click" IsEnabled="False"/>
+                    <Button x:Name="BtnSave" Content="💾 Save PDF" Style="{StaticResource PrimaryButtonStyle}" Click="BtnSave_Click" IsEnabled="False"/>
                 </StackPanel>
 
-                <!-- Undo / Redo PDF Actions -->
+                <Rectangle Width="1" Height="22" Fill="#444" Margin="0,0,15,0"/>
+
                 <StackPanel Orientation="Horizontal" Margin="0,0,15,0">
-                    <Button x:Name="BtnUndoPdf" Content="↩️ Undo" ToolTip="Undo (Ctrl+Z)" Click="BtnUndoPdf_Click" IsEnabled="False" Margin="2" Padding="6,2"/>
-                    <Button x:Name="BtnRedoPdf" Content="↪️ Redo" ToolTip="Redo (Ctrl+Y)" Click="BtnRedoPdf_Click" IsEnabled="False" Margin="2" Padding="6,2"/>
+                    <Button x:Name="BtnUndoPdf" Content="↩️ Undo" ToolTip="Undo (Ctrl+Z)" Style="{StaticResource NavButtonStyle}" Click="BtnUndoPdf_Click" IsEnabled="False"/>
+                    <Button x:Name="BtnRedoPdf" Content="↪️ Redo" ToolTip="Redo (Ctrl+Y)" Style="{StaticResource NavButtonStyle}" Click="BtnRedoPdf_Click" IsEnabled="False"/>
                 </StackPanel>
 
-                <!-- Pager -->
+                <Rectangle Width="1" Height="22" Fill="#444" Margin="0,0,15,0"/>
+
                 <StackPanel Orientation="Horizontal" Margin="0,0,15,0" VerticalAlignment="Center">
-                    <Button x:Name="BtnPrevPage" Content="◀" Click="BtnPrevPage_Click" IsEnabled="False" Margin="2" Width="28" Height="26"/>
-                    <TextBox x:Name="TxtCurrentPage" Text="1" Width="35" TextAlignment="Center" VerticalAlignment="Center" KeyDown="TxtCurrentPage_KeyDown" IsEnabled="False" Margin="2"/>
-                    <TextBlock x:Name="TxtTotalPages" Text="/ 0" Foreground="White" VerticalAlignment="Center" Margin="3,0,5,0" FontWeight="Bold"/>
-                    <Button x:Name="BtnNextPage" Content="▶" Click="BtnNextPage_Click" IsEnabled="False" Margin="2" Width="28" Height="26"/>
+                    <Button x:Name="BtnPrevPage" Content="◀" Style="{StaticResource NavButtonStyle}" Click="BtnPrevPage_Click" IsEnabled="False" Width="30"/>
+                    <TextBox x:Name="TxtCurrentPage" Text="1" Width="38" Background="#1E1E1E" Foreground="White" BorderBrush="#3E3E42"
+                             TextAlignment="Center" VerticalAlignment="Center" KeyDown="TxtCurrentPage_KeyDown" IsEnabled="False" Margin="4,0" Padding="2"/>
+                    <TextBlock x:Name="TxtTotalPages" Text="/ 0" Foreground="#AAAAAA" VerticalAlignment="Center" Margin="2,0,6,0" FontWeight="Bold"/>
+                    <Button x:Name="BtnNextPage" Content="▶" Style="{StaticResource NavButtonStyle}" Click="BtnNextPage_Click" IsEnabled="False" Width="30"/>
                 </StackPanel>
 
-                <!-- Zoom Controls -->
+                <Rectangle Width="1" Height="22" Fill="#444" Margin="0,0,15,0"/>
+
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="BtnZoomOut" Content="➖" Click="BtnZoomOut_Click" IsEnabled="False" Margin="2" Width="28" Height="26"/>
-                    <TextBlock x:Name="TxtZoomLevel" Text="100%" Foreground="White" VerticalAlignment="Center" Margin="5,0" FontWeight="Bold"/>
-                    <Button x:Name="BtnZoomIn" Content="➕" Click="BtnZoomIn_Click" IsEnabled="False" Margin="2" Width="28" Height="26"/>
-                    <Button x:Name="BtnZoom100" Content="1:1" Click="BtnZoom100_Click" IsEnabled="False" Margin="2" Padding="6,2"/>
-                    <Button x:Name="BtnFitPage" Content="🖼️ Fit Page" Click="BtnFitPage_Click" IsEnabled="False" Margin="2" Padding="6,2"/>
+                    <Button x:Name="BtnZoomOut" Content="➖" Style="{StaticResource NavButtonStyle}" Click="BtnZoomOut_Click" IsEnabled="False" Width="30"/>
+                    <TextBlock x:Name="TxtZoomLevel" Text="100%" Foreground="#007ACC" VerticalAlignment="Center" Margin="8,0" FontWeight="Bold"/>
+                    <Button x:Name="BtnZoomIn" Content="➕" Style="{StaticResource NavButtonStyle}" Click="BtnZoomIn_Click" IsEnabled="False" Width="30"/>
+                    <Button x:Name="BtnZoom100" Content="1:1" Style="{StaticResource NavButtonStyle}" Click="BtnZoom100_Click" IsEnabled="False"/>
+                    <Button x:Name="BtnFitPage" Content="🖼️ Fit Page" Style="{StaticResource NavButtonStyle}" Click="BtnFitPage_Click" IsEnabled="False"/>
                 </StackPanel>
             </WrapPanel>
         </Border>
 
-        <!-- Centered Viewer -->
+        <!-- PDF Viewer -->
         <ScrollViewer Grid.Row="1" 
                       x:Name="PdfScrollViewer"
                       HorizontalScrollBarVisibility="Auto" 
@@ -68,15 +127,19 @@
                       MouseDown="PdfScrollViewer_MouseDown"
                       MouseMove="PdfScrollViewer_MouseMove"
                       MouseUp="PdfScrollViewer_MouseUp"
-                      Background="#4A4A4A">
+                      Background="#181818">
 
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="30">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="35">
                 <Canvas x:Name="PdfContainer" Background="Transparent" 
                         UseLayoutRounding="True"
                         RenderOptions.BitmapScalingMode="HighQuality"
                         MouseMove="PdfContainer_MouseMove" 
                         MouseLeftButtonDown="PdfContainer_MouseLeftButtonDown"
                         MouseLeftButtonUp="PdfContainer_MouseLeftButtonUp">
+
+                    <Canvas.Effect>
+                        <DropShadowEffect BlurRadius="25" ShadowDepth="4" Opacity="0.6" Color="Black"/>
+                    </Canvas.Effect>
 
                     <Canvas.LayoutTransform>
                         <ScaleTransform x:Name="PdfScaleTransform" ScaleX="1.0" ScaleY="1.0"/>
@@ -112,10 +175,18 @@
                                    MouseLeftButtonDown="ResizeHandle_MouseLeftButtonDown"/>
                     </Canvas>
 
-                    <TextBlock x:Name="TxtPlaceholder" 
-                               Text="Drag and drop a PDF file here or click 'Open PDF'" 
-                               FontSize="16" Foreground="White" 
-                               HorizontalAlignment="Left" VerticalAlignment="Top" Canvas.Left="-180" Canvas.Top="-11"/>
+                    <Border x:Name="TxtPlaceholderBorder" Background="#252526" CornerRadius="8" Padding="25,15" Canvas.Left="-209" Canvas.Top="-28">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.3" Color="Black"/>
+                        </Border.Effect>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📄 " FontSize="20" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtPlaceholder" 
+                                       Text="Drag and drop a PDF file here or click 'Open PDF'" 
+                                       FontSize="15" Foreground="#CCCCCC" FontWeight="Medium"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
                 </Canvas>
             </StackPanel>
         </ScrollViewer>

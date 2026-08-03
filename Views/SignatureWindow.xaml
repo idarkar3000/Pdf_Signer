@@ -1,16 +1,36 @@
 ﻿<Window x:Class="PdfEditor.SignatureWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Draw Signature" Height="380" Width="540"
+        Title="Draw Signature" Height="400" Width="560"
+        Background="#1E1E1E"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
 
-    <Window.InputBindings>
-        <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
-        <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
-        <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding RedoCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
-    </Window.InputBindings>
+    <Window.Resources>
+        <Style x:Key="DialogButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#333337"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#3E3E42"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
 
-    <Grid Background="#F5F5F5" Margin="10">
+    <Grid Margin="15">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -18,35 +38,39 @@
         </Grid.RowDefinitions>
 
         <!-- Header Controls -->
-        <DockPanel Grid.Row="0" Margin="0,0,0,10">
+        <DockPanel Grid.Row="0" Margin="0,0,0,12">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Button x:Name="BtnUndo" Content="↩️ Undo" ToolTip="Undo (Ctrl+Z)" Click="BtnUndo_Click" Padding="6,2" Margin="0,0,4,0"/>
-                <Button x:Name="BtnRedo" Content="↪️ Redo" ToolTip="Redo (Ctrl+Y)" Click="BtnRedo_Click" Padding="6,2" Margin="0,0,10,0"/>
-                <TextBlock Text="Draw your signature below:" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                <Button x:Name="BtnUndo" Content="↩️ Undo" Style="{StaticResource DialogButtonStyle}" Click="BtnUndo_Click" Margin="0,0,4,0"/>
+                <Button x:Name="BtnRedo" Content="↪️ Redo" Style="{StaticResource DialogButtonStyle}" Click="BtnRedo_Click" Margin="0,0,12,0"/>
+                <TextBlock Text="Draw your signature:" Foreground="#DDDDDD" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <RadioButton x:Name="RbDraw" Content="✏️ Draw" IsChecked="True" GroupName="Tool" 
-                             Style="{StaticResource {x:Type ToggleButton}}" Padding="8,4" Margin="0,0,5,0" 
+                             Foreground="White" Style="{StaticResource {x:Type ToggleButton}}" Padding="10,5" Margin="0,0,5,0" 
                              Checked="ModeMode_Changed"/>
                 <RadioButton x:Name="RbErase" Content="🧹 Eraser" GroupName="Tool" 
-                             Style="{StaticResource {x:Type ToggleButton}}" Padding="8,4" 
+                             Foreground="White" Style="{StaticResource {x:Type ToggleButton}}" Padding="10,5" 
                              Checked="ModeMode_Changed"/>
             </StackPanel>
         </DockPanel>
 
         <!-- Drawing Canvas -->
-        <Border Grid.Row="1" BorderBrush="#CCCCCC" BorderThickness="2" Background="White" CornerRadius="4">
+        <Border Grid.Row="1" BorderBrush="#007ACC" BorderThickness="1.5" Background="White" CornerRadius="6">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.3" Color="Black"/>
+            </Border.Effect>
             <InkCanvas x:Name="SignatureCanvas" Background="Transparent" StrokeCollected="SignatureCanvas_StrokeCollected"/>
         </Border>
 
         <!-- Action Buttons -->
         <DockPanel Grid.Row="2" Margin="0,15,0,0">
-            <Button Content="🗑️ Clear All" Width="100" Height="30" Click="BtnClear_Click"/>
+            <Button Content="🗑️ Clear All" Width="100" Height="32" Style="{StaticResource DialogButtonStyle}" Click="BtnClear_Click"/>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="❌ Cancel" Width="90" Height="30" Margin="0,0,10,0" Click="BtnCancel_Click"/>
-                <Button Content="✅ Accept" Width="90" Height="30" Background="#007ACC" Foreground="White" Click="BtnAccept_Click"/>
+                <Button Content="Cancel" Width="90" Height="32" Style="{StaticResource DialogButtonStyle}" Margin="0,0,10,0" Click="BtnCancel_Click"/>
+                <Button Content="Accept Signature" Width="130" Height="32" Background="#007ACC" Foreground="White" 
+                        Style="{StaticResource DialogButtonStyle}" Click="BtnAccept_Click"/>
             </StackPanel>
         </DockPanel>
     </Grid>

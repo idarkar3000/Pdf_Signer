@@ -1,5 +1,6 @@
 ﻿using Microsoft.Win32;
 using Pdf_Signer.Commands;
+using PdfEditor.Views;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -227,6 +228,7 @@ namespace PdfEditor
                     BtnZoom100.IsEnabled = hasPages;
                     BtnFitPage.IsEnabled = hasPages;
                     BtnSign.IsEnabled = hasPages;
+                    BtnAddText.IsEnabled = hasPages;
                     BtnSave.IsEnabled = hasPages;
 
                     UpdateNavigationButtons();
@@ -550,6 +552,9 @@ namespace PdfEditor
 
         private void PdfContainer_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            // Quitar el foco de cualquier cuadro de texto activo para ocultar su marco de herramientas
+            Keyboard.ClearFocus();
+
             if (Keyboard.IsKeyDown(Key.Space)) return;
 
             Point mousePos = e.GetPosition(PdfContainer);
@@ -662,12 +667,6 @@ namespace PdfEditor
 
         private void BtnSave_Click(object sender, RoutedEventArgs e)
         {
-            if (!_signatureRelativePosition.HasValue || _currentSignature == null || _signatureTargetPage < 0)
-            {
-                MessageBox.Show("Please click on the page to place your signature first.", "No Signature Placed", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
             if (string.IsNullOrEmpty(_currentPdfPath)) return;
 
             SaveFileDialog saveFileDialog = new SaveFileDialog
@@ -681,21 +680,6 @@ namespace PdfEditor
             {
                 try
                 {
-                    Point savedPosition = _signatureRelativePosition.Value;
-                    int targetPage = _signatureTargetPage;
-
-                    byte[] signatureBytes;
-                    PngBitmapEncoder pngEncoder = new PngBitmapEncoder();
-                    pngEncoder.Frames.Add(BitmapFrame.Create(_currentSignature));
-
-                    using (MemoryStream ms = new MemoryStream())
-                    {
-                        pngEncoder.Save(ms);
-                        signatureBytes = ms.ToArray();
-                    }
-
-                    ResetSignaturesUI();
-
                     byte[] originalPdfBytes = File.ReadAllBytes(_currentPdfPath);
                     UglyToad.PdfPig.Writer.PdfDocumentBuilder builder = new UglyToad.PdfPig.Writer.PdfDocumentBuilder();
 
@@ -705,34 +689,88 @@ namespace PdfEditor
                         for (int pageIndex = 1; pageIndex <= originalPdf.NumberOfPages; pageIndex++)
                         {
                             UglyToad.PdfPig.Writer.PdfPageBuilder pageBuilder = builder.AddPage(originalPdf, pageIndex);
+                            var page = originalPdf.GetPage(pageIndex);
+                            double pdfWidth = page.Width;
+                            double pdfHeight = page.Height;
 
-                            if (pageIndex == targetPage + 1)
+                            // 1. ESTAMPAR FIRMA
+                            if (_signatureRelativePosition.HasValue && pageIndex == _signatureTargetPage + 1 && _currentSignature != null)
                             {
-                                var page = originalPdf.GetPage(pageIndex);
+                                Point savedPosition = _signatureRelativePosition.Value;
+                                PngBitmapEncoder pngEncoder = new PngBitmapEncoder();
+                                pngEncoder.Frames.Add(BitmapFrame.Create(_currentSignature));
 
-                                double pdfWidth = page.Width;
-                                double pdfHeight = page.Height;
-
-                                double sigWidth = _signatureWidthInPdfPoints;
-                                double aspectRatio = (double)pngEncoder.Frames[0].PixelHeight / (double)pngEncoder.Frames[0].PixelWidth;
-                                double sigHeight = sigWidth * aspectRatio;
-
-                                double clickX = savedPosition.X * pdfWidth;
-                                double clickY = savedPosition.Y * pdfHeight;
-
-                                double left = Math.Clamp(clickX - (sigWidth / 2.0), 0, pdfWidth - sigWidth);
-                                double top = Math.Clamp(clickY - (sigHeight / 2.0), 0, pdfHeight - sigHeight);
-
-                                double x1 = left;
-                                double y1 = pdfHeight - top - sigHeight;
-                                double x2 = x1 + sigWidth;
-                                double y2 = y1 + sigHeight;
-
-                                UglyToad.PdfPig.Core.PdfRectangle placement = new UglyToad.PdfPig.Core.PdfRectangle(x1, y1, x2, y2);
-
-                                using (MemoryStream stream = new MemoryStream(signatureBytes))
+                                using (MemoryStream ms = new MemoryStream())
                                 {
-                                    pageBuilder.AddPng(stream, placement); // Direct addition in a single step[cite: 5]
+                                    pngEncoder.Save(ms);
+                                    byte[] signatureBytes = ms.ToArray();
+
+                                    double sigWidth = _signatureWidthInPdfPoints;
+                                    double aspectRatio = (double)pngEncoder.Frames[0].PixelHeight / (double)pngEncoder.Frames[0].PixelWidth;
+                                    double sigHeight = sigWidth * aspectRatio;
+
+                                    double clickX = savedPosition.X * pdfWidth;
+                                    double clickY = savedPosition.Y * pdfHeight;
+
+                                    double left = Math.Clamp(clickX - (sigWidth / 2.0), 0, pdfWidth - sigWidth);
+                                    double top = Math.Clamp(clickY - (sigHeight / 2.0), 0, pdfHeight - sigHeight);
+
+                                    double x1 = left;
+                                    double y1 = pdfHeight - top - sigHeight;
+                                    double x2 = x1 + sigWidth;
+                                    double y2 = y1 + sigHeight;
+
+                                    UglyToad.PdfPig.Core.PdfRectangle placement = new UglyToad.PdfPig.Core.PdfRectangle(x1, y1, x2, y2);
+
+                                    using (MemoryStream stream = new MemoryStream(signatureBytes))
+                                    {
+                                        pageBuilder.AddPng(stream, placement);
+                                    }
+                                }
+                            }
+
+                            // 2. ESTAMPAR CUADROS DE TEXTO COMO IMÁGENES PNG (Conserva Color y Tamaño Exacto)
+                            if (pageIndex == _currentPage + 1)
+                            {
+                                foreach (var child in PdfContainer.Children)
+                                {
+                                    if (child is PdfEditor.Views.DraggableTextBlock textBlock)
+                                    {
+                                        if (string.IsNullOrWhiteSpace(textBlock.Text)) continue;
+
+                                        BitmapImage textBitmap = textBlock.RenderToBitmap();
+                                        if (textBitmap == null) continue;
+
+                                        PngBitmapEncoder pngEncoder = new PngBitmapEncoder();
+                                        pngEncoder.Frames.Add(BitmapFrame.Create(textBitmap));
+
+                                        using (MemoryStream ms = new MemoryStream())
+                                        {
+                                            pngEncoder.Save(ms);
+                                            byte[] textBytes = ms.ToArray();
+
+                                            double canvasLeft = Canvas.GetLeft(textBlock);
+                                            double canvasTop = Canvas.GetTop(textBlock);
+
+                                            double relativeX = canvasLeft / PdfContainer.ActualWidth;
+                                            double relativeY = canvasTop / PdfContainer.ActualHeight;
+
+                                            double textWidthInPdf = (textBitmap.PixelWidth / PdfContainer.ActualWidth) * pdfWidth;
+                                            double textHeightInPdf = (textBitmap.PixelHeight / PdfContainer.ActualHeight) * pdfHeight;
+
+                                            double x1 = relativeX * pdfWidth;
+                                            double y1 = pdfHeight - (relativeY * pdfHeight) - textHeightInPdf;
+                                            double x2 = x1 + textWidthInPdf;
+                                            double y2 = y1 + textHeightInPdf;
+
+                                            UglyToad.PdfPig.Core.PdfRectangle placement = new UglyToad.PdfPig.Core.PdfRectangle(x1, y1, x2, y2);
+
+                                            using (MemoryStream stream = new MemoryStream(textBytes))
+                                            {
+                                                pageBuilder.AddPng(stream, placement);
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -740,8 +778,25 @@ namespace PdfEditor
 
                     File.WriteAllBytes(saveFileDialog.FileName, builder.Build());
 
+                    // 🌟 CLAVE: LIMPIAR CONTROLES FLOTANTES PARA EVITAR DUPLICADOS AL RECARGAR
+                    ResetSignaturesUI();
+
+                    // Eliminar los TextBlocks del Canvas
+                    var textBlocksToRemove = new List<UIElement>();
+                    foreach (UIElement child in PdfContainer.Children)
+                    {
+                        if (child is PdfEditor.Views.DraggableTextBlock)
+                        {
+                            textBlocksToRemove.Add(child);
+                        }
+                    }
+                    foreach (var tb in textBlocksToRemove)
+                    {
+                        PdfContainer.Children.Remove(tb);
+                    }
+
+                    // Recargar el documento firmado resultante
                     _currentPdfPath = saveFileDialog.FileName;
-                    _currentPage = targetPage;
                     LoadPdfMetadata();
                     RenderCurrentPage();
 
@@ -752,6 +807,18 @@ namespace PdfEditor
                     MessageBox.Show($"Error saving the PDF: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
+        }
+
+        private void BtnAddText_Click(object sender, RoutedEventArgs e)
+        {
+            var newTextBlock = new DraggableTextBlock();
+
+            // Posicionar el nuevo cuadro en el centro visible del PdfContainer
+            Canvas.SetLeft(newTextBlock, 50);
+            Canvas.SetTop(newTextBlock, 50);
+
+            // Añadirlo dentro del contenedor del PDF para que escale con el Zoom
+            PdfContainer.Children.Add(newTextBlock);
         }
 
         #endregion

@@ -1,0 +1,76 @@
+<UserControl x:Class="PdfEditor.Views.DraggableTextBlock"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Cursor="Hand"
+             Focusable="True"
+             GotFocus="UserControl_GotFocus"
+             LostFocus="UserControl_LostFocus"
+             MouseLeftButtonDown="UserControl_MouseLeftButtonDown"
+             MouseMove="UserControl_MouseMove"
+             MouseLeftButtonUp="UserControl_MouseLeftButtonUp">
+
+	<UserControl.Resources>
+		<Style x:Key="ControlButtonStyle" TargetType="Button">
+			<Setter Property="Background" Value="#333337"/>
+			<Setter Property="Foreground" Value="#F1F1F1"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Padding" Value="6,2"/>
+			<Setter Property="FontSize" Value="11"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="Button">
+						<Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="3" Padding="{TemplateBinding Padding}">
+							<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter TargetName="bd" Property="Background" Value="#3E3E42"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+	</UserControl.Resources>
+
+	<Border x:Name="MainBorder"
+            BorderBrush="#007ACC"
+            BorderThickness="1.5"
+            Background="#252526"
+            CornerRadius="6"
+            Padding="6">
+		<Border.Effect>
+			<DropShadowEffect BlurRadius="8" ShadowDepth="2" Opacity="0.4" Color="Black"/>
+		</Border.Effect>
+		<StackPanel>
+			<!-- Control Toolbar -->
+			<WrapPanel x:Name="ControlPanel" Orientation="Horizontal" Margin="0,0,0,6" Visibility="Visible">
+				<TextBlock Text="Size:" Foreground="#AAAAAA" FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0" FontWeight="SemiBold"/>
+
+				<TextBox x:Name="TxtFontSize" Width="32" FontSize="11" Text="16" Background="#1E1E1E" Foreground="#FFF"
+                         BorderBrush="#3E3E42" BorderThickness="1" TextAlignment="Center"
+                         TextChanged="TxtFontSize_TextChanged" Margin="0,0,8,0" Padding="1"/>
+
+				<Button x:Name="BtnPickColor" Content="🎨 Color" Style="{StaticResource ControlButtonStyle}"
+                        Click="BtnPickColor_Click" Margin="0,0,8,0" Cursor="Hand"/>
+
+				<!-- Indicador Circular de Color -->
+				<Ellipse x:Name="ColorPreview" Width="14" Height="14" Fill="Red"
+                         Stroke="#FFFFFF" StrokeThickness="1" VerticalAlignment="Center" Margin="0,0,8,0"/>
+
+				<Button Content="✕" Click="DeleteButton_Click" Style="{StaticResource ControlButtonStyle}"
+                        Foreground="#FF5555" ToolTip="Delete text box" Cursor="Hand"/>
+			</WrapPanel>
+
+			<!-- Text Input Container -->
+			<Grid Background="Transparent">
+				<TextBlock x:Name="TxtPlaceholder" Text="Escribe tu texto..." Foreground="#666666" FontSize="16"
+                           Margin="2,0,0,0" IsHitTestVisible="False" VerticalAlignment="Center"/>
+				<TextBox x:Name="TxtInput" MinWidth="100" Background="Transparent" BorderThickness="0"
+                         FontSize="16" FontFamily="Segoe UI" Foreground="Red"
+                         GotFocus="TxtInput_GotFocus" TextChanged="TxtInput_TextChanged"
+                         AcceptsReturn="True" TextWrapping="Wrap"/>
+			</Grid>
+		</StackPanel>
+	</Border>
+</UserControl>
