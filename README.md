@@ -20,7 +20,7 @@ Aplicacion de escritorio desarrollada en C# y WPF (.NET 10) para visualizar docu
 ## Requisitos e Instalacion
 
 1. Clonar el repositorio:
-   git clone https://github.com/tu-usuario/Pdf_Signer.git
+   git clone https://github.com/idarkar3000/Pdf_Signer.git
 
 2. Abrir el proyecto en Visual Studio 2022 o posterior.
 3. Compilar y ejecutar la solucion.
