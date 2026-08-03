@@ -1,0 +1,28 @@
+## Visual Studio y .NET
+.vs/
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+
+## Archivos de compilación y salida
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]uild/
+
+## Paquetes NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+
+## Archivos temporales de código y SO
+*.suo
+*.cache
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
