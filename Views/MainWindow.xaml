@@ -1,0 +1,123 @@
+﻿<Window x:Class="PdfEditor.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Pdf_Signer" Height="850" Width="1150"
+        WindowStartupLocation="CenterScreen"
+        AllowDrop="True"
+        Drop="Window_Drop"
+        DragOver="Window_DragOver">
+
+    <Window.InputBindings>
+        <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+        <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+        <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+        <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+        <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding RedoCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+        <KeyBinding Gesture="Delete" Command="{Binding ClearSignCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+    </Window.InputBindings>
+
+    <Grid x:Name="MainGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top Toolbar -->
+        <Border Grid.Row="0" Background="#2D2D30" Padding="6">
+            <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                <!-- File & Signature Actions -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,15,0">
+                    <Button x:Name="BtnOpen" Content="📁 Open PDF" Click="BtnOpen_Click" Margin="3" Padding="8,4"/>
+                    <Button x:Name="BtnSign" Content="✍️ Draw Signature" Click="BtnSign_Click" IsEnabled="False" Margin="3" Padding="8,4"/>
+                    <Button x:Name="BtnClearSign" Content="🗑️ Remove Signature" Click="BtnClearSign_Click" IsEnabled="False" Margin="3" Padding="8,4"/>
+                    <Button x:Name="BtnSave" Content="💾 Save PDF" Click="BtnSave_Click" IsEnabled="False" Margin="3" Padding="8,4"/>
+                </StackPanel>
+
+                <!-- Undo / Redo PDF Actions -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,15,0">
+                    <Button x:Name="BtnUndoPdf" Content="↩️ Undo" ToolTip="Undo (Ctrl+Z)" Click="BtnUndoPdf_Click" IsEnabled="False" Margin="2" Padding="6,2"/>
+                    <Button x:Name="BtnRedoPdf" Content="↪️ Redo" ToolTip="Redo (Ctrl+Y)" Click="BtnRedoPdf_Click" IsEnabled="False" Margin="2" Padding="6,2"/>
+                </StackPanel>
+
+                <!-- Pager -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,15,0" VerticalAlignment="Center">
+                    <Button x:Name="BtnPrevPage" Content="◀" Click="BtnPrevPage_Click" IsEnabled="False" Margin="2" Width="28" Height="26"/>
+                    <TextBox x:Name="TxtCurrentPage" Text="1" Width="35" TextAlignment="Center" VerticalAlignment="Center" KeyDown="TxtCurrentPage_KeyDown" IsEnabled="False" Margin="2"/>
+                    <TextBlock x:Name="TxtTotalPages" Text="/ 0" Foreground="White" VerticalAlignment="Center" Margin="3,0,5,0" FontWeight="Bold"/>
+                    <Button x:Name="BtnNextPage" Content="▶" Click="BtnNextPage_Click" IsEnabled="False" Margin="2" Width="28" Height="26"/>
+                </StackPanel>
+
+                <!-- Zoom Controls -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="BtnZoomOut" Content="➖" Click="BtnZoomOut_Click" IsEnabled="False" Margin="2" Width="28" Height="26"/>
+                    <TextBlock x:Name="TxtZoomLevel" Text="100%" Foreground="White" VerticalAlignment="Center" Margin="5,0" FontWeight="Bold"/>
+                    <Button x:Name="BtnZoomIn" Content="➕" Click="BtnZoomIn_Click" IsEnabled="False" Margin="2" Width="28" Height="26"/>
+                    <Button x:Name="BtnZoom100" Content="1:1" Click="BtnZoom100_Click" IsEnabled="False" Margin="2" Padding="6,2"/>
+                    <Button x:Name="BtnFitPage" Content="🖼️ Fit Page" Click="BtnFitPage_Click" IsEnabled="False" Margin="2" Padding="6,2"/>
+                </StackPanel>
+            </WrapPanel>
+        </Border>
+
+        <!-- Centered Viewer -->
+        <ScrollViewer Grid.Row="1" 
+                      x:Name="PdfScrollViewer"
+                      HorizontalScrollBarVisibility="Auto" 
+                      VerticalScrollBarVisibility="Auto"
+                      PreviewMouseWheel="ScrollViewer_PreviewMouseWheel"
+                      MouseDown="PdfScrollViewer_MouseDown"
+                      MouseMove="PdfScrollViewer_MouseMove"
+                      MouseUp="PdfScrollViewer_MouseUp"
+                      Background="#4A4A4A">
+
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="30">
+                <Canvas x:Name="PdfContainer" Background="Transparent" 
+                        UseLayoutRounding="True"
+                        RenderOptions.BitmapScalingMode="HighQuality"
+                        MouseMove="PdfContainer_MouseMove" 
+                        MouseLeftButtonDown="PdfContainer_MouseLeftButtonDown"
+                        MouseLeftButtonUp="PdfContainer_MouseLeftButtonUp">
+
+                    <Canvas.LayoutTransform>
+                        <ScaleTransform x:Name="PdfScaleTransform" ScaleX="1.0" ScaleY="1.0"/>
+                    </Canvas.LayoutTransform>
+
+                    <Image x:Name="PdfViewer"/>
+
+                    <Image x:Name="SignaturePreview" 
+                           Opacity="0.7" 
+                           Visibility="Collapsed" 
+                           Stretch="Fill"
+                           Canvas.Left="-9999" Canvas.Top="-9999"
+                           IsHitTestVisible="False"/>
+
+                    <Canvas x:Name="PlacedSignatureContainer" 
+                            Visibility="Collapsed" 
+                            Canvas.Left="-9999" Canvas.Top="-9999">
+
+                        <Rectangle x:Name="SignatureBorder"
+                                   Stroke="#007ACC" 
+                                   StrokeDashArray="3 2" 
+                                   StrokeThickness="1.5"/>
+
+                        <Image x:Name="PlacedSignatureImage" 
+                               Stretch="Fill"/>
+
+                        <Rectangle x:Name="ResizeHandle" 
+                                   Width="10" Height="10" 
+                                   Fill="#007ACC" 
+                                   Stroke="White" 
+                                   StrokeThickness="1"
+                                   Cursor="SizeNWSE"
+                                   MouseLeftButtonDown="ResizeHandle_MouseLeftButtonDown"/>
+                    </Canvas>
+
+                    <TextBlock x:Name="TxtPlaceholder" 
+                               Text="Drag and drop a PDF file here or click 'Open PDF'" 
+                               FontSize="16" Foreground="White" 
+                               HorizontalAlignment="Left" VerticalAlignment="Top" Canvas.Left="-180" Canvas.Top="-11"/>
+                </Canvas>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>
