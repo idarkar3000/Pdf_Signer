@@ -51,13 +51,6 @@ public class RelativePlacementTests
         Assert.Equal(375, top, 6);
     }
 
-    [Fact]
-    public void Convierte_Medidas_Del_Lienzo_A_Puntos()
-    {
-        // 100 px en un lienzo de 1190 px sobre una pagina de 595 puntos = 50 puntos.
-        Assert.Equal(50, RelativePlacement.CanvasToPdf(100, pdfLength: 595, canvasTotal: 1190), 6);
-    }
-
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]

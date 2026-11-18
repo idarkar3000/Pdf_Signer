@@ -1,4 +1,5 @@
 ﻿using Pdf_Signer.Commands;
+using Pdf_Signer.Views;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -107,37 +108,10 @@ namespace Pdf_Signer
 
             try
             {
-                Rect bounds = SignatureCanvas.Strokes.GetBounds();
-                if (bounds.Width <= 0 || bounds.Height <= 0) return;
+                if (SignatureRasterizer.Render(SignatureCanvas.Strokes) is not { } raster) return;
 
-                double targetWidth = 200;
-                double targetHeight = 80;
-
-                double scaleX = targetWidth / bounds.Width;
-                double scaleY = targetHeight / bounds.Height;
-                double scale = Math.Min(scaleX, scaleY);
-
-                int finalWidth = Math.Max(1, (int)Math.Ceiling(bounds.Width * scale) + 10);
-                int finalHeight = Math.Max(1, (int)Math.Ceiling(bounds.Height * scale) + 10);
-
-                DrawingVisual visual = new DrawingVisual();
-                using (DrawingContext dc = visual.RenderOpen())
-                {
-                    dc.PushTransform(new TranslateTransform(-bounds.X * scale + 5, -bounds.Y * scale + 5));
-                    dc.PushTransform(new ScaleTransform(scale, scale));
-
-                    SignatureCanvas.Strokes.Draw(dc);
-
-                    dc.Pop();
-                    dc.Pop();
-                }
-
-                RenderTargetBitmap rtb = new RenderTargetBitmap(
-                    finalWidth, finalHeight, 96, 96, PixelFormats.Pbgra32);
-                rtb.Render(visual);
-
-                PngBitmapEncoder encoder = new PngBitmapEncoder();
-                encoder.Frames.Add(BitmapFrame.Create(rtb));
+                PngBitmapEncoder encoder = new();
+                encoder.Frames.Add(BitmapFrame.Create(raster));
 
                 using (MemoryStream ms = new MemoryStream())
                 {

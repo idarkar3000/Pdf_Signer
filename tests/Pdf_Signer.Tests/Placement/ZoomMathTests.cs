@@ -41,14 +41,14 @@ public class ZoomMathTests
     public void Ajustar_La_Pagina_Descuenta_El_Margen()
     {
         // (860 - 60) / (1000 * 2) = 0.4
-        Assert.Equal(0.4, ZoomMath.FitPage(availableHeight: 860, pagePixelHeight: 1000), 6);
+        Assert.Equal(0.4, ZoomMath.FitPage(availableHeight: 860, pageHeightPoints: 1000), 6);
     }
 
     [Theory]
     [InlineData(860, 0)]
     [InlineData(50, 1000)]
-    public void Ajustar_La_Pagina_Nunca_Baja_Del_Minimo(double availableHeight, double pagePixelHeight) =>
-        Assert.Equal(ZoomMath.MinZoom, ZoomMath.FitPage(availableHeight, pagePixelHeight), 6);
+    public void Ajustar_La_Pagina_Nunca_Baja_Del_Minimo(double availableHeight, double pageHeightPoints) =>
+        Assert.Equal(ZoomMath.MinZoom, ZoomMath.FitPage(availableHeight, pageHeightPoints), 6);
 
     [Theory]
     [InlineData(1.0, "100%")]

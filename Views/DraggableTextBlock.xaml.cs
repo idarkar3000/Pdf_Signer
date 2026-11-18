@@ -16,6 +16,16 @@ namespace Pdf_Signer.Views
     /// </summary>
     public partial class DraggableTextBlock : UserControl
     {
+        /// <summary>
+        /// Pixeles de PNG por punto del documento al capturar el texto. El lienzo
+        /// se mide en puntos, asi que sin esto el texto se capturaria a 96 ppp y
+        /// al estamparlo se verian los pixeles. A 4x queda en unos 288 ppp.
+        /// </summary>
+        private const int CaptureScale = 4;
+
+        private static readonly Brush FocusedBackground = Freeze(new SolidColorBrush(Color.FromArgb(230, 37, 37, 38)));
+        private static readonly Brush FocusedBorder = Freeze(new SolidColorBrush(Color.FromRgb(0, 122, 204)));
+
         private bool _isDragging;
         private bool _moved;
         private Point _grabOffset;
@@ -53,20 +63,24 @@ namespace Pdf_Signer.Views
 
         private void UserControl_LostFocus(object sender, RoutedEventArgs e) => ShowControls(false);
 
+        /// <summary>
+        /// Muestra u oculta la barra del cuadro. La maqueta no cambia de tamano:
+        /// la barra se oculta con <see cref="Visibility.Hidden"/> (sigue ocupando
+        /// su sitio) y el borde solo cambia de color. Si el cuadro se encogiera al
+        /// perder el foco, el texto se moveria dentro de el, y lo que se estampa
+        /// al guardar saldria corrido respecto a lo que ve el usuario.
+        /// </summary>
         private void ShowControls(bool visible)
         {
-            if (visible)
-            {
-                MainBorder.BorderThickness = new Thickness(1.5);
-                MainBorder.Background = new SolidColorBrush(Color.FromArgb(230, 37, 37, 38));
-                ControlPanel.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                MainBorder.BorderThickness = new Thickness(0);
-                MainBorder.Background = Brushes.Transparent;
-                ControlPanel.Visibility = Visibility.Collapsed;
-            }
+            ControlPanel.Visibility = visible ? Visibility.Visible : Visibility.Hidden;
+            MainBorder.BorderBrush = visible ? FocusedBorder : Brushes.Transparent;
+            MainBorder.Background = visible ? FocusedBackground : Brushes.Transparent;
+        }
+
+        private static Brush Freeze(SolidColorBrush brush)
+        {
+            brush.Freeze();
+            return brush;
         }
 
         private void TxtInput_TextChanged(object sender, TextChangedEventArgs e)
@@ -195,9 +209,9 @@ namespace Pdf_Signer.Views
         #endregion
 
         /// <summary>
-        /// Renderiza el texto tal y como se ve. Solo se renderiza el cuadro de
-        /// texto: asi la barra de herramientas no acaba en el PDF y no hay que
-        /// ocultarla (que era lo que dejaba el control sin barra al guardar).
+        /// Renderiza el texto tal y como se ve, ampliado para que al estamparlo
+        /// no se vean pixeles. Solo se renderiza el cuadro de texto: asi la barra
+        /// de herramientas no acaba en el PDF.
         /// </summary>
         public RenderedText? RenderPng()
         {
@@ -205,16 +219,24 @@ namespace Pdf_Signer.Views
 
             Point offset = TxtInput.TransformToAncestor(this).Transform(new Point(0, 0));
 
+            // El cuarto parametro son los ppp: WPF escala el dibujo por dpi/96,
+            // asi que con 96 * CaptureScale el PNG sale CaptureScale veces mas
+            // grande que el control. El tamano en puntos no cambia.
             RenderTargetBitmap bitmap = new(
-                (int)Math.Ceiling(TxtInput.ActualWidth),
-                (int)Math.Ceiling(TxtInput.ActualHeight),
-                96,
-                96,
+                (int)Math.Ceiling(TxtInput.ActualWidth * CaptureScale),
+                (int)Math.Ceiling(TxtInput.ActualHeight * CaptureScale),
+                96 * CaptureScale,
+                96 * CaptureScale,
                 PixelFormats.Pbgra32);
 
             bitmap.Render(TxtInput);
 
-            return new RenderedText(BitmapHelpers.ToPng(bitmap), offset.X, offset.Y);
+            return new RenderedText(
+                BitmapHelpers.ToPng(bitmap),
+                offset.X,
+                offset.Y,
+                TxtInput.ActualWidth,
+                TxtInput.ActualHeight);
         }
     }
 }

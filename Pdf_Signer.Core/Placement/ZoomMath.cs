@@ -1,15 +1,16 @@
 namespace Pdf_Signer.Core.Placement;
 
 /// <summary>
-/// Cuentas del zoom. La pagina se renderiza a 72 ppp y se pinta al doble de
-/// tamano (<see cref="BaseScale"/>) para que se lea comoda en pantalla; el zoom
-/// que ve el usuario es un multiplicador sobre esa base.
+/// Cuentas del zoom. El lienzo se mide en puntos PDF y se pinta al doble de
+/// tamano (<see cref="BaseScale"/>) para que se lea comodo en pantalla; el zoom
+/// que ve el usuario es un multiplicador sobre esa base. La resolucion a la que
+/// se rasteriza la pagina no entra aqui: el lienzo siempre se mide en puntos.
 /// </summary>
 public static class ZoomMath
 {
     /// <summary>
-    /// Escala fija con la que se pinta la pagina renderizada a 72 ppp. Por eso
-    /// "100 %" en la barra equivale a verla al doble de su tamano real.
+    /// Pixeles de pantalla por punto con zoom al 100 %. Por eso "100 %" en la
+    /// barra equivale a ver la pagina al doble de su tamano real.
     /// </summary>
     public const double BaseScale = 2.0;
 
@@ -44,15 +45,15 @@ public static class ZoomMath
     /// Zoom que hace que la pagina entera quepa en el alto disponible.
     /// </summary>
     /// <param name="availableHeight">Alto visible del visor, en pixeles.</param>
-    /// <param name="pagePixelHeight">Alto de la pagina renderizada, en pixeles.</param>
-    public static double FitPage(double availableHeight, double pagePixelHeight)
+    /// <param name="pageHeightPoints">Alto de la pagina en puntos PDF.</param>
+    public static double FitPage(double availableHeight, double pageHeightPoints)
     {
-        if (pagePixelHeight <= 0) return MinZoom;
+        if (pageHeightPoints <= 0) return MinZoom;
 
         double usableHeight = availableHeight - FitMargin;
         if (usableHeight <= 0) return MinZoom;
 
-        return Clamp(usableHeight / (pagePixelHeight * BaseScale));
+        return Clamp(usableHeight / (pageHeightPoints * BaseScale));
     }
 
     /// <summary>Texto del indicador de zoom. Es el zoom relativo, no el tamano real.</summary>

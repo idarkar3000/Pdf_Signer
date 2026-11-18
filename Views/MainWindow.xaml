@@ -138,8 +138,8 @@
                 <Canvas x:Name="PdfContainer" Background="Transparent"
                         UseLayoutRounding="True"
                         RenderOptions.BitmapScalingMode="HighQuality"
-                        Width="{Binding PagePixelWidth}"
-                        Height="{Binding PagePixelHeight}"
+                        Width="{Binding PageWidth}"
+                        Height="{Binding PageHeight}"
                         Cursor="{Binding CanvasCursor}"
                         MouseMove="PdfContainer_MouseMove"
                         MouseLeftButtonDown="PdfContainer_MouseLeftButtonDown"
@@ -153,7 +153,13 @@
                         <ScaleTransform ScaleX="{Binding ZoomScale}" ScaleY="{Binding ZoomScale}"/>
                     </Canvas.LayoutTransform>
 
-                    <Image x:Name="PdfViewer" Source="{Binding PageImage}"/>
+                    <!-- La pagina se rasteriza a 216 ppp y se pinta al tamano del
+                         lienzo, que va en puntos: de ahi que se vea nitida. -->
+                    <Image x:Name="PdfViewer"
+                           Source="{Binding PageImage}"
+                           Width="{Binding PageWidth}"
+                           Height="{Binding PageHeight}"
+                           Stretch="Fill"/>
 
                     <Image x:Name="SignaturePreview"
                            Source="{Binding PreviewImage}"

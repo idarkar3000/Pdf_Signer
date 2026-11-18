@@ -28,13 +28,16 @@ namespace Pdf_Signer.ViewModels
         private int _targetPage;
         private int _currentPage;
 
-        // Ultimo PNG que se pudo renderizar y desfase del texto dentro del cuadro.
-        // Se guardan porque el historial y el guardado tienen que funcionar aunque
-        // la vista no este montada (al deshacer se recrean los cuadros y sus
-        // controles tardan un ciclo del dispatcher en cargarse).
+        // Ultimo PNG que se pudo renderizar y geometria del texto dentro del
+        // cuadro (desfase y tamano, en puntos). Se guardan porque el historial y
+        // el guardado tienen que funcionar aunque la vista no este montada (al
+        // deshacer se recrean los cuadros y sus controles tardan un ciclo del
+        // dispatcher en cargarse).
         private byte[]? _cachedPng;
         private double _offsetXPoints;
         private double _offsetYPoints;
+        private double _widthPoints;
+        private double _heightPoints;
 
         public TextStampViewModel(Action<TextStampViewModel>? deleteRequested = null)
         {
@@ -127,30 +130,34 @@ namespace Pdf_Signer.ViewModels
         }
 
         /// <summary>Convierte el cuadro en algo que el nucleo sepa estampar.</summary>
-        public TextStamp? ToStamp(int canvasWidth, int canvasHeight, double pageWidth, double pageHeight)
+        /// <param name="pageWidth">Ancho de la pagina en puntos.</param>
+        /// <param name="pageHeight">Alto de la pagina en puntos.</param>
+        public TextStamp? ToStamp(double pageWidth, double pageHeight)
         {
             RenderedText? rendered = PngProvider?.Invoke();
 
             if (rendered is not null)
             {
                 _cachedPng = rendered.Png;
-                _offsetXPoints = RelativePlacement.CanvasToPdf(rendered.OffsetX, pageWidth, canvasWidth);
-                _offsetYPoints = RelativePlacement.CanvasToPdf(rendered.OffsetY, pageHeight, canvasHeight);
+                _offsetXPoints = rendered.OffsetX;
+                _offsetYPoints = rendered.OffsetY;
+                _widthPoints = rendered.Width;
+                _heightPoints = rendered.Height;
             }
 
             // Sin vista montada se usa el ultimo PNG bueno: mejor un cuadro con el
             // texto de hace un instante que perderlo del historial y del guardado.
             if (_cachedPng is null) return null;
 
+            // El lienzo se mide en puntos, asi que Left y Top ya son puntos.
+            PlacementRect box = new(Left, Top, _widthPoints, _heightPoints);
+
             return TextStampFactory.Create(
                 Text,
                 _cachedPng,
-                Left,
-                Top,
+                box,
                 _offsetXPoints,
                 _offsetYPoints,
-                canvasWidth,
-                canvasHeight,
                 pageWidth,
                 pageHeight,
                 FontSize,
@@ -161,8 +168,8 @@ namespace Pdf_Signer.ViewModels
         /// <summary>Reconstruye el cuadro a partir de un sello guardado (al deshacer).</summary>
         public static TextStampViewModel FromStamp(
             TextStamp stamp,
-            int canvasWidth,
-            int canvasHeight,
+            double pageWidth,
+            double pageHeight,
             Action<TextStampViewModel>? deleteRequested = null)
         {
             TextStampViewModel viewModel = new(deleteRequested)
@@ -174,8 +181,8 @@ namespace Pdf_Signer.ViewModels
                     (byte)(stamp.ColorArgb >> 16),
                     (byte)(stamp.ColorArgb >> 8),
                     (byte)stamp.ColorArgb),
-                Left = stamp.TopLeft.X * canvasWidth,
-                Top = stamp.TopLeft.Y * canvasHeight,
+                Left = stamp.TopLeft.X * pageWidth,
+                Top = stamp.TopLeft.Y * pageHeight,
                 TargetPage = stamp.TargetPage
             };
 
@@ -184,6 +191,8 @@ namespace Pdf_Signer.ViewModels
             viewModel._cachedPng = stamp.PngBytes;
             viewModel._offsetXPoints = stamp.OffsetXPoints;
             viewModel._offsetYPoints = stamp.OffsetYPoints;
+            viewModel._widthPoints = stamp.WidthPoints;
+            viewModel._heightPoints = stamp.HeightPoints;
 
             return viewModel;
         }

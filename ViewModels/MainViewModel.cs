@@ -118,10 +118,16 @@ namespace Pdf_Signer.ViewModels
 
         public BitmapImage? PageImage => _pageImage;
 
-        /// <summary>Ancho del lienzo en pixeles. <c>NaN</c> cuando no hay documento, para que el canvas se ajuste al marcador de posicion.</summary>
-        public double PagePixelWidth => _pageImage?.PixelWidth ?? double.NaN;
+        /// <summary>
+        /// Tamano del lienzo en puntos PDF. El lienzo se mide siempre en puntos,
+        /// aunque la pagina se rasterice a mas resolucion: asi el tamano de
+        /// fuente y las posiciones significan lo mismo en pantalla y en el PDF.
+        /// <c>NaN</c> cuando no hay documento, para que el canvas se ajuste al
+        /// marcador de posicion.
+        /// </summary>
+        public double PageWidth => HasDocument ? _pageWidthPoints : double.NaN;
 
-        public double PagePixelHeight => _pageImage?.PixelHeight ?? double.NaN;
+        public double PageHeight => HasDocument ? _pageHeightPoints : double.NaN;
 
         public bool HasDocument => _pageImage is not null;
 
@@ -304,9 +310,9 @@ namespace Pdf_Signer.ViewModels
         /// <summary>Ajusta la pagina al alto visible del visor.</summary>
         public void FitToWindow(double availableHeight)
         {
-            if (_pageImage is null) return;
+            if (_pageImage is null || _pageHeightPoints <= 0) return;
 
-            SetZoom(ZoomMath.FitPage(availableHeight, _pageImage.PixelHeight));
+            SetZoom(ZoomMath.FitPage(availableHeight, _pageHeightPoints));
         }
 
         private void RenderCurrentPage()
@@ -336,8 +342,8 @@ namespace Pdf_Signer.ViewModels
             _pageImage = image;
 
             OnPropertyChanged(nameof(PageImage));
-            OnPropertyChanged(nameof(PagePixelWidth));
-            OnPropertyChanged(nameof(PagePixelHeight));
+            OnPropertyChanged(nameof(PageWidth));
+            OnPropertyChanged(nameof(PageHeight));
             OnPropertyChanged(nameof(HasDocument));
             OnPropertyChanged(nameof(IsPlaceholderVisible));
 
@@ -486,8 +492,8 @@ namespace Pdf_Signer.ViewModels
                 PushUndoState();
             }
 
-            double pixelsPerPoint = _pageImage.PixelWidth / _pageWidthPoints;
-            double width = SignaturePlacement.ClampWidth(_resizeStartWidth + (delta / pixelsPerPoint));
+            // El lienzo se mide en puntos, asi que el arrastre ya viene en puntos.
+            double width = SignaturePlacement.ClampWidth(_resizeStartWidth + delta);
             _signature = _signature with { WidthPoints = width };
 
             UpdateSignatureOverlay();
@@ -532,11 +538,12 @@ namespace Pdf_Signer.ViewModels
                 _pageWidthPoints,
                 _pageHeightPoints);
 
-            double pixelsPerPoint = _pageImage.PixelWidth / _pageWidthPoints;
-            _previewLeft = rect.Left * pixelsPerPoint;
-            _previewTop = rect.Top * pixelsPerPoint;
-            _previewWidth = rect.Width * pixelsPerPoint;
-            _previewHeight = rect.Height * pixelsPerPoint;
+            // Las medidas del rectangulo ya estan en puntos: el lienzo se mide en
+            // puntos aunque la pagina se rasterice a mas resolucion.
+            _previewLeft = rect.Left;
+            _previewTop = rect.Top;
+            _previewWidth = rect.Width;
+            _previewHeight = rect.Height;
 
             OnPropertyChanged(nameof(PreviewLeft));
             OnPropertyChanged(nameof(PreviewTop));
@@ -560,11 +567,11 @@ namespace Pdf_Signer.ViewModels
                     _pageWidthPoints,
                     _pageHeightPoints);
 
-                double pixelsPerPoint = _pageImage.PixelWidth / _pageWidthPoints;
-                _signatureLeft = Math.Round(rect.Left * pixelsPerPoint);
-                _signatureTop = Math.Round(rect.Top * pixelsPerPoint);
-                _signatureWidth = rect.Width * pixelsPerPoint;
-                _signatureHeight = rect.Height * pixelsPerPoint;
+                // El lienzo se mide en puntos, asi que el rectangulo vale tal cual.
+                _signatureLeft = Math.Round(rect.Left);
+                _signatureTop = Math.Round(rect.Top);
+                _signatureWidth = rect.Width;
+                _signatureHeight = rect.Height;
             }
 
             _isSignatureVisible = visible;
@@ -628,15 +635,11 @@ namespace Pdf_Signer.ViewModels
         {
             List<TextStamp> stamps = new();
 
-            if (_pageImage is not null)
+            if (_pageImage is not null && _pageWidthPoints > 0 && _pageHeightPoints > 0)
             {
                 foreach (TextStampViewModel stamp in TextStamps)
                 {
-                    TextStamp? captured = stamp.ToStamp(
-                        _pageImage.PixelWidth,
-                        _pageImage.PixelHeight,
-                        _pageWidthPoints,
-                        _pageHeightPoints);
+                    TextStamp? captured = stamp.ToStamp(_pageWidthPoints, _pageHeightPoints);
 
                     if (captured is not null) stamps.Add(captured);
                 }
@@ -674,14 +677,14 @@ namespace Pdf_Signer.ViewModels
 
             TextStamps.Clear();
 
-            if (_pageImage is not null)
+            if (_pageImage is not null && _pageWidthPoints > 0 && _pageHeightPoints > 0)
             {
                 foreach (TextStamp stamp in state.TextStamps)
                 {
                     TextStampViewModel viewModel = TextStampViewModel.FromStamp(
                         stamp,
-                        _pageImage.PixelWidth,
-                        _pageImage.PixelHeight,
+                        _pageWidthPoints,
+                        _pageHeightPoints,
                         RemoveTextStamp);
 
                     viewModel.SetCurrentPage(_currentPage);

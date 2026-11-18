@@ -1,10 +1,9 @@
 using Pdf_Signer.Core.Models;
-using Pdf_Signer.Core.Pdf;
 
 namespace Pdf_Signer.Core.Placement;
 
 /// <summary>
-/// Convierte lo que hay en el lienzo (posicion en pixeles y PNG renderizado) en
+/// Convierte lo que hay en el lienzo (posicion en puntos y PNG renderizado) en
 /// un <see cref="TextStamp"/> expresado en coordenadas de pagina. Esta aqui y no
 /// en el ViewModel para poder probarlo sin WPF.
 /// </summary>
@@ -12,16 +11,17 @@ public static class TextStampFactory
 {
     /// <summary>
     /// Crea el sello de texto, o <c>null</c> si no hay nada que estampar (texto
-    /// vacio, sin PNG o lienzo sin tamano).
+    /// vacio, sin PNG, caja sin tamano o pagina sin tamano).
     /// </summary>
     /// <param name="text">Texto escrito.</param>
     /// <param name="png">PNG con el texto renderizado.</param>
-    /// <param name="left">Posicion del cuadro en el lienzo, en pixeles.</param>
-    /// <param name="top">Posicion del cuadro en el lienzo, en pixeles.</param>
+    /// <param name="box">
+    /// Caja del texto sobre la pagina, en puntos. Es el tamano que ocupa en el
+    /// documento, no el de los pixeles del PNG: el PNG se captura ampliado para
+    /// que se vea nitido, pero ocupa lo mismo en el papel.
+    /// </param>
     /// <param name="offsetXPoints">Distancia del texto al borde del cuadro, en puntos PDF.</param>
     /// <param name="offsetYPoints">Distancia del texto al borde del cuadro, en puntos PDF.</param>
-    /// <param name="canvasWidth">Ancho del lienzo en pixeles (la pagina renderizada).</param>
-    /// <param name="canvasHeight">Alto del lienzo en pixeles.</param>
     /// <param name="pageWidth">Ancho de la pagina en puntos PDF.</param>
     /// <param name="pageHeight">Alto de la pagina en puntos PDF.</param>
     /// <param name="fontSize">Tamano de fuente usado.</param>
@@ -30,12 +30,9 @@ public static class TextStampFactory
     public static TextStamp? Create(
         string text,
         byte[]? png,
-        double left,
-        double top,
+        PlacementRect box,
         double offsetXPoints,
         double offsetYPoints,
-        double canvasWidth,
-        double canvasHeight,
         double pageWidth,
         double pageHeight,
         double fontSize,
@@ -43,19 +40,18 @@ public static class TextStampFactory
         int targetPage)
     {
         if (string.IsNullOrWhiteSpace(text) || png is null) return null;
-        if (canvasWidth <= 0 || canvasHeight <= 0) return null;
-
-        PngSize size = PngSize.Read(png);
+        if (pageWidth <= 0 || pageHeight <= 0) return null;
+        if (box.Width <= 0 || box.Height <= 0) return null;
 
         return new TextStamp
         {
             Text = text,
             PngBytes = png,
-            TopLeft = new RelativePoint(left / canvasWidth, top / canvasHeight).Clamped(),
+            TopLeft = new RelativePoint(box.Left / pageWidth, box.Top / pageHeight).Clamped(),
             OffsetXPoints = offsetXPoints,
             OffsetYPoints = offsetYPoints,
-            WidthPoints = RelativePlacement.CanvasToPdf(size.Width, pageWidth, canvasWidth),
-            HeightPoints = RelativePlacement.CanvasToPdf(size.Height, pageHeight, canvasHeight),
+            WidthPoints = box.Width,
+            HeightPoints = box.Height,
             FontSize = fontSize,
             ColorArgb = colorArgb,
             TargetPage = targetPage
