@@ -28,6 +28,14 @@ namespace Pdf_Signer.ViewModels
         private int _targetPage;
         private int _currentPage;
 
+        // Ultimo PNG que se pudo renderizar y desfase del texto dentro del cuadro.
+        // Se guardan porque el historial y el guardado tienen que funcionar aunque
+        // la vista no este montada (al deshacer se recrean los cuadros y sus
+        // controles tardan un ciclo del dispatcher en cargarse).
+        private byte[]? _cachedPng;
+        private double _offsetXPoints;
+        private double _offsetYPoints;
+
         public TextStampViewModel(Action<TextStampViewModel>? deleteRequested = null)
         {
             DeleteCommand = new RelayCommand(_ => deleteRequested?.Invoke(this));
@@ -122,13 +130,25 @@ namespace Pdf_Signer.ViewModels
         public TextStamp? ToStamp(int canvasWidth, int canvasHeight, double pageWidth, double pageHeight)
         {
             RenderedText? rendered = PngProvider?.Invoke();
-            if (rendered is null) return null;
+
+            if (rendered is not null)
+            {
+                _cachedPng = rendered.Png;
+                _offsetXPoints = RelativePlacement.CanvasToPdf(rendered.OffsetX, pageWidth, canvasWidth);
+                _offsetYPoints = RelativePlacement.CanvasToPdf(rendered.OffsetY, pageHeight, canvasHeight);
+            }
+
+            // Sin vista montada se usa el ultimo PNG bueno: mejor un cuadro con el
+            // texto de hace un instante que perderlo del historial y del guardado.
+            if (_cachedPng is null) return null;
 
             return TextStampFactory.Create(
                 Text,
-                rendered.Png,
-                Left + rendered.OffsetX,
-                Top + rendered.OffsetY,
+                _cachedPng,
+                Left,
+                Top,
+                _offsetXPoints,
+                _offsetYPoints,
                 canvasWidth,
                 canvasHeight,
                 pageWidth,
@@ -158,6 +178,12 @@ namespace Pdf_Signer.ViewModels
                 Top = stamp.TopLeft.Y * canvasHeight,
                 TargetPage = stamp.TargetPage
             };
+
+            // El sello ya trae todo lo que hace falta para volver a estamparse, asi
+            // que el cuadro funciona desde el primer momento, sin esperar a la vista.
+            viewModel._cachedPng = stamp.PngBytes;
+            viewModel._offsetXPoints = stamp.OffsetXPoints;
+            viewModel._offsetYPoints = stamp.OffsetYPoints;
 
             return viewModel;
         }

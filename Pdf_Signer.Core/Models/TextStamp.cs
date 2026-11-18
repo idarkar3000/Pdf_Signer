@@ -16,6 +16,17 @@ public sealed record TextStamp
     /// <summary>Esquina superior izquierda del cuadro, relativa a la pagina.</summary>
     public required RelativePoint TopLeft { get; init; }
 
+    /// <summary>
+    /// Distancia horizontal del texto a la esquina del cuadro, en puntos PDF.
+    /// El PNG solo contiene el texto, pero el cuadro que lo envuelve lleva
+    /// tambien la barra de herramientas; sin este desfase el texto estampado
+    /// saldria corrido y cada deshacer lo desplazaria un poco mas.
+    /// </summary>
+    public double OffsetXPoints { get; init; }
+
+    /// <summary>Distancia vertical del texto a la esquina del cuadro, en puntos PDF.</summary>
+    public double OffsetYPoints { get; init; }
+
     /// <summary>Ancho del cuadro en puntos PDF.</summary>
     public double WidthPoints { get; init; }
 

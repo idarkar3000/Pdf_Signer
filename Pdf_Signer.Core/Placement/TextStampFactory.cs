@@ -18,6 +18,8 @@ public static class TextStampFactory
     /// <param name="png">PNG con el texto renderizado.</param>
     /// <param name="left">Posicion del cuadro en el lienzo, en pixeles.</param>
     /// <param name="top">Posicion del cuadro en el lienzo, en pixeles.</param>
+    /// <param name="offsetXPoints">Distancia del texto al borde del cuadro, en puntos PDF.</param>
+    /// <param name="offsetYPoints">Distancia del texto al borde del cuadro, en puntos PDF.</param>
     /// <param name="canvasWidth">Ancho del lienzo en pixeles (la pagina renderizada).</param>
     /// <param name="canvasHeight">Alto del lienzo en pixeles.</param>
     /// <param name="pageWidth">Ancho de la pagina en puntos PDF.</param>
@@ -30,6 +32,8 @@ public static class TextStampFactory
         byte[]? png,
         double left,
         double top,
+        double offsetXPoints,
+        double offsetYPoints,
         double canvasWidth,
         double canvasHeight,
         double pageWidth,
@@ -48,6 +52,8 @@ public static class TextStampFactory
             Text = text,
             PngBytes = png,
             TopLeft = new RelativePoint(left / canvasWidth, top / canvasHeight).Clamped(),
+            OffsetXPoints = offsetXPoints,
+            OffsetYPoints = offsetYPoints,
             WidthPoints = RelativePlacement.CanvasToPdf(size.Width, pageWidth, canvasWidth),
             HeightPoints = RelativePlacement.CanvasToPdf(size.Height, pageHeight, canvasHeight),
             FontSize = fontSize,

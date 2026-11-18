@@ -67,8 +67,11 @@ public static class PdfStamper
 
     private static void StampText(PdfPageBuilder pageBuilder, TextStamp text, double pageWidth, double pageHeight)
     {
-        PlacementRect rect = TextPlacement.Compute(
-            text.TopLeft,
+        // El cuadro se coloca por su esquina, pero el PNG solo lleva el texto:
+        // hay que sumarle el desfase del texto dentro del cuadro.
+        PlacementRect rect = TextPlacement.ComputeAt(
+            (text.TopLeft.X * pageWidth) + text.OffsetXPoints,
+            (text.TopLeft.Y * pageHeight) + text.OffsetYPoints,
             text.WidthPoints,
             text.HeightPoints,
             pageWidth,

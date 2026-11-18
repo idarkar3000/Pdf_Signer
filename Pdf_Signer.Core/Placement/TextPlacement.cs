@@ -9,8 +9,25 @@ namespace Pdf_Signer.Core.Placement;
 /// </summary>
 public static class TextPlacement
 {
+    /// <summary>Coloca el cuadro a partir de una posicion relativa a la pagina.</summary>
     public static PlacementRect Compute(
         RelativePoint topLeft,
+        double widthPoints,
+        double heightPoints,
+        double pageWidth,
+        double pageHeight) =>
+        ComputeAt(
+            topLeft.X * pageWidth,
+            topLeft.Y * pageHeight,
+            widthPoints,
+            heightPoints,
+            pageWidth,
+            pageHeight);
+
+    /// <summary>Coloca el cuadro a partir de una posicion ya en puntos PDF.</summary>
+    public static PlacementRect ComputeAt(
+        double leftPoints,
+        double topPoints,
         double widthPoints,
         double heightPoints,
         double pageWidth,
@@ -24,12 +41,12 @@ public static class TextPlacement
         // Math.Max(0, ...) para que un cuadro mas grande que la hoja no reviente
         // el Clamp con el rango invertido.
         double left = Math.Clamp(
-            topLeft.X * pageWidth,
+            leftPoints,
             0.0,
             Math.Max(0.0, pageWidth - widthPoints));
 
         double top = Math.Clamp(
-            topLeft.Y * pageHeight,
+            topPoints,
             0.0,
             Math.Max(0.0, pageHeight - heightPoints));
 
