@@ -9,11 +9,12 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace PdfEditor
+namespace Pdf_Signer
 {
     public partial class SignatureWindow : Window
     {
-        public BitmapImage SignatureBitmap { get; private set; }
+        /// <summary>Firma dibujada, ya rasterizada. <c>null</c> mientras no se acepte el dialogo.</summary>
+        public BitmapImage? SignatureBitmap { get; private set; }
 
         private readonly Stack<Stroke> _undoStack = new Stack<Stroke>();
         private readonly Stack<Stroke> _redoStack = new Stack<Stroke>();

@@ -1,29 +1,59 @@
 ﻿using System;
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+using Pdf_Signer.Services;
+using Pdf_Signer.ViewModels;
 
-namespace PdfEditor.Views
+namespace Pdf_Signer.Views
 {
+    /// <summary>
+    /// Cuadro de texto que se puede arrastrar sobre la pagina. Solo se ocupa de
+    /// lo visual: los datos viven en <see cref="TextStampViewModel"/>.
+    /// </summary>
     public partial class DraggableTextBlock : UserControl
     {
         private bool _isDragging;
-        private Point _clickPosition;
-        private Color _selectedColor = Colors.Red;
+        private bool _moved;
+        private Point _grabOffset;
+        private Canvas? _pageCanvas;
 
         public DraggableTextBlock()
         {
             InitializeComponent();
+
+            Loaded += OnLoaded;
+            Unloaded += OnUnloaded;
         }
 
+        private TextStampViewModel? Stamp => DataContext as TextStampViewModel;
+
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            if (Stamp is not { } stamp) return;
+
+            stamp.PngProvider = RenderPng;
+            TxtFontSize.Text = stamp.FontSize.ToString("0");
+            _pageCanvas = FindPageCanvas();
+        }
+
+        private void OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            if (Stamp is { } stamp) stamp.PngProvider = null;
+        }
+
+        #region Aspecto
+
         private void UserControl_GotFocus(object sender, RoutedEventArgs e) => ShowControls(true);
+
         private void TxtInput_GotFocus(object sender, RoutedEventArgs e) => ShowControls(true);
+
         private void UserControl_LostFocus(object sender, RoutedEventArgs e) => ShowControls(false);
 
-        public void ShowControls(bool visible)
+        private void ShowControls(bool visible)
         {
             if (visible)
             {
@@ -39,21 +69,29 @@ namespace PdfEditor.Views
             }
         }
 
+        private void TxtInput_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            TxtPlaceholder.Visibility = string.IsNullOrEmpty(TxtInput.Text) ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         private void TxtFontSize_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (TxtInput == null) return;
-            if (double.TryParse(TxtFontSize.Text, out double newSize) && newSize > 4 && newSize < 200)
+            if (TxtInput == null || Stamp is not { } stamp) return;
+
+            if (double.TryParse(TxtFontSize.Text, out double size) && size > TextStampViewModel.MinFontSize)
             {
-                TxtInput.FontSize = newSize;
-                TxtPlaceholder.FontSize = newSize;
+                stamp.FontSize = size;
             }
         }
 
         private void BtnPickColor_Click(object sender, RoutedEventArgs e)
         {
-            var contextMenu = new ContextMenu();
-            var colors = new (string Name, Color Color)[]
-            {
+            if (Stamp is not { } stamp) return;
+
+            ContextMenu menu = new();
+
+            (string Name, Color Color)[] colors =
+            [
                 ("Red", Colors.Red),
                 ("Black", Colors.Black),
                 ("Blue", Colors.DeepSkyBlue),
@@ -61,108 +99,122 @@ namespace PdfEditor.Views
                 ("Orange", Colors.Orange),
                 ("Purple", Colors.MediumPurple),
                 ("White", Colors.White)
-            };
+            ];
 
-            foreach (var (name, color) in colors)
+            foreach ((string name, Color color) in colors)
             {
-                var item = new MenuItem
+                MenuItem item = new()
                 {
                     Header = name,
-                    Icon = new Border { Width = 12, Height = 12, Background = new SolidColorBrush(color), CornerRadius = new CornerRadius(2) }
+                    Icon = new Border
+                    {
+                        Width = 12,
+                        Height = 12,
+                        Background = new SolidColorBrush(color),
+                        CornerRadius = new CornerRadius(2)
+                    }
                 };
-                item.Click += (s, args) =>
-                {
-                    _selectedColor = color;
-                    TxtInput.Foreground = new SolidColorBrush(_selectedColor);
-                    ColorPreview.Fill = TxtInput.Foreground; // Uso correcto de Fill en Ellipse
-                };
-                contextMenu.Items.Add(item);
+
+                item.Click += (_, _) => stamp.Color = color;
+                menu.Items.Add(item);
             }
-            contextMenu.IsOpen = true;
+
+            menu.PlacementTarget = BtnPickColor;
+            menu.IsOpen = true;
         }
 
-        private void TxtInput_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            TxtPlaceholder.Visibility = string.IsNullOrEmpty(TxtInput.Text) ? Visibility.Visible : Visibility.Collapsed;
-        }
+        #endregion
+
+        #region Arrastre
 
         private void UserControl_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            this.Focus();
+            Focus();
             ShowControls(true);
 
-            if (e.OriginalSource is TextBox || e.OriginalSource is Button) return;
+            // Los clics dentro de la barra de herramientas no arrastran el cuadro.
+            if (e.OriginalSource is TextBox or Button or Ellipse or MenuItem) return;
+
+            _pageCanvas ??= FindPageCanvas();
+            if (_pageCanvas is null) return;
 
             _isDragging = true;
-            _clickPosition = e.GetPosition(this);
-            this.CaptureMouse();
+            _moved = false;
+            _grabOffset = e.GetPosition(this);
+            CaptureMouse();
         }
 
         private void UserControl_MouseMove(object sender, MouseEventArgs e)
         {
-            if (!_isDragging) return;
+            if (!_isDragging || _pageCanvas is null || Stamp is not { } stamp) return;
 
-            var parentCanvas = this.Parent as Canvas;
-            if (parentCanvas == null) return;
+            Point position = e.GetPosition(_pageCanvas);
 
-            Point currentMousePosition = e.GetPosition(parentCanvas);
-            double newLeft = currentMousePosition.X - _clickPosition.X;
-            double newTop = currentMousePosition.Y - _clickPosition.Y;
+            // En cuanto hay movimiento de verdad, el historial guarda como estaba.
+            if (!_moved)
+            {
+                _moved = true;
+                FindMainViewModel()?.BeginTextStampMove();
+            }
 
-            if (newLeft >= 0 && newLeft + this.ActualWidth <= parentCanvas.ActualWidth) Canvas.SetLeft(this, newLeft);
-            if (newTop >= 0 && newTop + this.ActualHeight <= parentCanvas.ActualHeight) Canvas.SetTop(this, newTop);
+            double maxLeft = Math.Max(0, _pageCanvas.ActualWidth - ActualWidth);
+            double maxTop = Math.Max(0, _pageCanvas.ActualHeight - ActualHeight);
+
+            stamp.Left = Math.Clamp(position.X - _grabOffset.X, 0, maxLeft);
+            stamp.Top = Math.Clamp(position.Y - _grabOffset.Y, 0, maxTop);
         }
 
         private void UserControl_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            if (_isDragging)
+            if (!_isDragging) return;
+
+            _isDragging = false;
+            ReleaseMouseCapture();
+        }
+
+        /// <summary>
+        /// Canvas de la pagina. Se busca el primero con tamano porque el panel del
+        /// ItemsControl tambien es un Canvas, pero mide cero.
+        /// </summary>
+        private Canvas? FindPageCanvas()
+        {
+            DependencyObject? current = VisualTreeHelper.GetParent(this);
+
+            while (current is not null)
             {
-                _isDragging = false;
-                this.ReleaseMouseCapture();
+                if (current is Canvas canvas && canvas.ActualWidth > 0 && canvas.ActualHeight > 0) return canvas;
+
+                current = VisualTreeHelper.GetParent(current);
             }
+
+            return null;
         }
 
-        private void DeleteButton_Click(object sender, RoutedEventArgs e)
+        private MainViewModel? FindMainViewModel() => Window.GetWindow(this)?.DataContext as MainViewModel;
+
+        #endregion
+
+        /// <summary>
+        /// Renderiza el texto tal y como se ve. Solo se renderiza el cuadro de
+        /// texto: asi la barra de herramientas no acaba en el PDF y no hay que
+        /// ocultarla (que era lo que dejaba el control sin barra al guardar).
+        /// </summary>
+        public RenderedText? RenderPng()
         {
-            var parentCanvas = this.Parent as Canvas;
-            parentCanvas?.Children.Remove(this);
-        }
+            if (TxtInput.ActualWidth <= 0 || TxtInput.ActualHeight <= 0) return null;
 
-        public BitmapImage RenderToBitmap()
-        {
-            ShowControls(false);
-            this.UpdateLayout();
+            Point offset = TxtInput.TransformToAncestor(this).Transform(new Point(0, 0));
 
-            double width = TxtInput.ActualWidth + 12;
-            double height = TxtInput.ActualHeight + 8;
-
-            if (width <= 0 || height <= 0) return null;
-
-            RenderTargetBitmap rtb = new RenderTargetBitmap(
-                (int)Math.Max(1, width),
-                (int)Math.Max(1, height),
-                96, 96,
+            RenderTargetBitmap bitmap = new(
+                (int)Math.Ceiling(TxtInput.ActualWidth),
+                (int)Math.Ceiling(TxtInput.ActualHeight),
+                96,
+                96,
                 PixelFormats.Pbgra32);
 
-            rtb.Render(TxtInput);
+            bitmap.Render(TxtInput);
 
-            PngBitmapEncoder encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(rtb));
-
-            using (MemoryStream ms = new MemoryStream())
-            {
-                encoder.Save(ms);
-                ms.Position = 0;
-
-                BitmapImage bitmap = new BitmapImage();
-                bitmap.BeginInit();
-                bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                bitmap.StreamSource = ms;
-                bitmap.EndInit();
-                return bitmap;
-            }
+            return new RenderedText(BitmapHelpers.ToPng(bitmap), offset.X, offset.Y);
         }
-
-        public string Text => TxtInput.Text;
     }
 }
