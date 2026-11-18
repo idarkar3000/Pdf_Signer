@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "refactor/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    # La aplicacion es WPF, asi que solo compila en Windows.
+    runs-on: windows-latest
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restaurar
+        run: dotnet restore Pdf_Signer.slnx
+
+      - name: Compilar
+        run: dotnet build Pdf_Signer.slnx -c Release --no-restore
+
+      - name: Probar
+        run: dotnet test tests/Pdf_Signer.Tests/Pdf_Signer.Tests.csproj -c Release --no-build --logger "console;verbosity=normal"
