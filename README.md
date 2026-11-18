@@ -14,7 +14,9 @@ La hice para firmar y anotar documentos sin pasar por la impresora ni el escáne
 - **Cuadros de texto**: se añaden sobre la página, se mueven arrastrando, y cada uno tiene tamaño de fuente, color y botón de borrar.
 - **Deshacer y rehacer**: Ctrl+Z y Ctrl+Y sobre la firma y sobre los cuadros de texto, incluyendo añadir, mover, redimensionar y borrar.
 - **Abrir arrastrando**: sueltas un PDF sobre la ventana y se carga.
-- **Exportación**: el PDF se genera con PdfPig, conservando el contenido original y la transparencia de la firma.
+- **Exportación**: el PDF se genera con PdfPig: cada página con su contenido y, encima, la firma y los textos, con transparencia.
+- **Lo que ves es lo que se guarda**: la página se rasteriza a 216 ppp y el lienzo se mide en puntos PDF, así que las posiciones y los tamaños no cambian entre la pantalla y el PDF.
+- **Firma manuscrita, no criptográfica**: estampa la firma que dibujas a mano. No usa certificado ni valida la identidad del firmante.
 
 ## Cómo se usa
 
@@ -74,19 +76,13 @@ Es MVVM. El estado y el comportamiento están en `MainViewModel`, y la vista sol
 
 `Pdf_Signer.Core` no depende de WPF. La geometría, el historial y el estampado usan tipos propios (`RelativePoint`, `PlacementRect`) y `byte[]`, así que se pueden probar sin abrir una ventana. El renderizado y los diálogos van detrás de `IPdfRenderService` e `IDialogService`, que el ViewModel recibe por constructor.
 
-Un detalle que prefiero decir en vez de esconder: los PNG de la firma y de los cuadros de texto los produce la vista, porque es lo único que sabe convertir un control en imagen. El ViewModel los pide a través de un delegado.
+Los PNG de la firma y de los cuadros de texto los produce la vista, que es lo único que sabe convertir un control en imagen; el ViewModel los pide a través de un delegado.
 
 ## Pruebas y CI
 
-68 pruebas xUnit sobre el núcleo: colocación de la firma y del texto (incluido el caso de una firma más grande que la página, que antes reventaba), zoom, historial de deshacer, lectura de la cabecera de un PNG y estampado real sobre un PDF de dos páginas, comprobando con PdfPig que la imagen cae solo en su página y en la posición esperada.
+71 pruebas xUnit sobre el núcleo: colocación de la firma y del texto (incluido el caso de una firma más grande que la página), zoom, historial de deshacer, lectura de la cabecera de un PNG y estampado real sobre un PDF de dos páginas, comprobando con PdfPig que la imagen cae solo en su página y en la posición esperada.
 
 GitHub Actions compila y pasa las pruebas en `windows-latest` en cada push y en cada pull request.
-
-## Limitaciones
-
-- **Solo Windows.** Es WPF, no hay plan de portarlo.
-- **La firma y los cuadros de texto se estampan como imagen**, no como texto seleccionable del PDF. Es el precio de conservar exactamente el color y la fuente que se ven en pantalla.
-- **No es una firma digital criptográfica.** Estampa una firma manuscrita sobre el documento. No firma con certificado ni valida la identidad del firmante, así que no sustituye a una firma electrónica avanzada.
 
 ## Licencia
 
