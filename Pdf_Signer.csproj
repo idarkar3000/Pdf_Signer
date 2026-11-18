@@ -14,4 +14,22 @@
 		<PackageReference Include="PdfPig" Version="0.1.15" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<ProjectReference Include="Pdf_Signer.Core\Pdf_Signer.Core.csproj" />
+	</ItemGroup>
+
+	<!--
+		Los proyectos anidados viven dentro de esta carpeta, y el SDK compila por
+		defecto todos los .cs que cuelgan de ella. Hay que sacarlos del glob o sus
+		ficheros se compilan dos veces (una aqui y otra en su propio proyecto).
+	-->
+	<ItemGroup>
+		<Compile Remove="Pdf_Signer.Core\**" />
+		<Compile Remove="tests\**" />
+		<Page Remove="Pdf_Signer.Core\**" />
+		<Page Remove="tests\**" />
+		<None Remove="Pdf_Signer.Core\**" />
+		<None Remove="tests\**" />
+	</ItemGroup>
+
 </Project>

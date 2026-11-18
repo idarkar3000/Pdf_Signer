@@ -1,3 +1,5 @@
 <Solution>
   <Project Path="Pdf_Signer.csproj" />
+  <Project Path="Pdf_Signer.Core/Pdf_Signer.Core.csproj" />
+  <Project Path="tests/Pdf_Signer.Tests/Pdf_Signer.Tests.csproj" />
 </Solution>
